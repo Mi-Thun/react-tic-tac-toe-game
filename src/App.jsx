@@ -1,7 +1,16 @@
 import { useState } from "react";
+
 import GameBoard from "./components/GameBoard";
 import Player from "./components/Player";
 import { Log } from "./components/Log";
+import { winingCombinations } from "./wining-combinations.js";
+import { GameOver } from "./GameOver.jsx";
+
+const initialBoard = [
+  [null, null, null],
+  [null, null, null],
+  [null, null, null],
+];
 
 function deriveActivePlayer(gameLog) {
   let currentPlayer = "X";
@@ -13,8 +22,37 @@ function deriveActivePlayer(gameLog) {
 
 function App() {
   const [gameLog, setGameLog] = useState([]);
+  const [player, setPlayer] = useState({
+    X: "Player 1",
+    O: "Player 2",
+  });
 
   const activePlayer = deriveActivePlayer(gameLog);
+
+  let gameBoard = [...initialBoard.map((row) => [...row])];
+  let winner = null;
+
+  for (const turn of gameLog) {
+    const { square, player } = turn;
+    const { row, col } = square;
+    gameBoard[row][col] = player;
+  }
+
+  for (const combination of winingCombinations) {
+    const [first, second, third] = combination;
+    const firstPlayer = gameBoard[first.row][first.col];
+    const secondPlayer = gameBoard[second.row][second.col];
+    const thirdPlayer = gameBoard[third.row][third.col];
+    if (
+      firstPlayer !== null &&
+      firstPlayer === secondPlayer &&
+      firstPlayer === thirdPlayer
+    ) {
+      winner = player[firstPlayer];
+    }
+  }
+
+  const hasDraw = gameLog.length === 9 && !winner;
 
   function handleSelectSquare(rowIndex, cellIndex) {
     setGameLog((previousGameLog) => {
@@ -28,6 +66,19 @@ function App() {
     });
   }
 
+  function resetGame() {
+    setGameLog([]);
+  }
+
+  function handleEditPlayerName(symbol, playerName) {
+    setPlayer((previousPlayer) => {
+      return {
+        ...previousPlayer,
+        [symbol]: playerName,
+      };
+    });
+  }
+
   return (
     <main>
       <div id="game-container">
@@ -36,14 +87,19 @@ function App() {
             initialPlayerName="Player 1"
             symbol="X"
             isActive={activePlayer === "X"}
+            handleEditPlayerName={handleEditPlayerName}
           />
           <Player
             initialPlayerName="Player 2"
             symbol="O"
             isActive={activePlayer === "O"}
+            handleEditPlayerName={handleEditPlayerName}
           />
         </ol>
-        <GameBoard onSelectUser={handleSelectSquare} turns={gameLog} />
+        {(winner || hasDraw) && (
+          <GameOver winner={winner} onReset={resetGame} />
+        )}
+        <GameBoard onSelectUser={handleSelectSquare} gameBoard={gameBoard} />
       </div>
       <Log gameLog={gameLog} />
     </main>
